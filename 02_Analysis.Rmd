@@ -1,0 +1,105 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r setup, include=FALSE, message=F, warning=F}
+
+rm(list = ls(all = TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+
+#Column no missing function
+completeFun <- function(data, desiredCols) {
+  completeVec <- complete.cases(data[, desiredCols])
+  return(data[completeVec, ])
+}
+
+library(pacman)
+pacman::p_load("dplyr","tidyr","xlsx","ggplot2","survival","kableExtra","GLMMadaptive","jtools","sjPlot","sjmisc","sjlabelled","countrycode","margins","webshot")
+
+# necessary if not installed
+# webshot::install_phantomjs() 
+
+```
+
+```{r loaddata}
+wi_df <- read.csv(file = "data/wi_df.csv", header=T)
+wi_df_long <- read.csv(file = "data/wi_df_long.csv",header=T)
+```
+
+
+### Correlations
+
+```{r corrs}
+# Merge 
+
+wi_df$year <- wi_df$labor_workinjury_firstlaw
+
+
+# Some correlations
+wi_df$independence <- as.numeric(wi_df$independence)
+
+# Make non-colonies, non-slavery-based labor forces, abol = NA
+wi_df$abol <- ifelse(wi_df$fcolony==1,wi_df$abol,NA)
+# years since indep
+wi_df$yrs_indep <- wi_df$labor_workinjury_firstlaw - wi_df$independence
+# make negative numbers equal to 0 (colonies)
+wi_df$yrs_indep <- ifelse(wi_df$yrs_indep < 0, 0, wi_df$yrs_indep)
+
+# correlation frame
+cor1 <- select(wi_df, labor_workinjury_firstlaw, labor_workinjury_firstins, first2full, independence, polity2i_first, polity2i_risk, gdpi, gdp_7yr_rate, gdp_7yr_a, abol, fcolony, yrs_indep)
+tbl1 <- round(cor(cor1,use = "pairwise.complete.obs"),2)
+# remove upper tri
+tbl1[upper.tri(tbl1)] <- " "
+
+tbl1k <- kable(tbl1, digits = 2, col.names = c("1st Law","1st Risk Pooling","Years 1st Law to 1st Risk", "Indep_Yr", "Democracy, 1st law", "Democracy, 1st risk-pool", "GDP", "GDP_7yrGrowth", "GDP_t-7", "Abolish_Yr", "Fmr. Colony","Yrs Indep til 1st Law"), "html")
+
+kable_styling(tbl1k)
+
+```
+
+```{r prepdata}
+wi_df <- wi_df %>%
+  mutate(gdpik  = gdpi/1000, 
+         yeara = year - 1850,
+         period1 = ifelse(year<1923,1,0),
+         yrsindep = year - as.numeric(independence),
+         yrsindep = ifelse(yrsindep<0,0,yrsindep),
+         fcolony = ifelse(ht_colonial!=0,1,0),
+         yrsindeplog = ifelse(yrsindep==0,0.5,yrsindep),
+         yrsindeplog = log(yrsindeplog),
+         gdplog = log(gdpik),
+         gdplogm = mean(gdplog, na.rm=T),
+         gdplogc = gdplog-gdplogm,
+         gdpm = mean(gdpik, na.rm=T),
+         gdpc = gdpik-gdpm,
+         # time from 1st law to ins old label
+         inslag = first2full)
+
+```
+
+# Models
+```{r m1}
+m01 <- lm(labor_workinjury_firstlaw ~ gdplog  + polity2i_first + period1  +  period1*polity2i_first, data = wi_df)
+
+m11 <- lm(scut ~ gdplog  + polity2i_risk + period1  + period1*polity2i_risk, data = wi_df)
+
+m21 <- lm(first2full ~ gdplog  + polity2i_risk  + period1  + period1*polity2i_risk , data = wi_df)
+
+m02 <- lm(labor_workinjury_firstlaw ~ gdplog + startgdp  + polity2i_first + period1  + period1*polity2i_first + commst + abol*noslave , data = wi_df)
+
+m12 <- lm(scut ~ gdplog  + polity2i_risk + period1 + period1*polity2i_risk + commst + abol*noslave , data = wi_df)
+
+m22 <- lm(first2full ~ gdplog  + polity2i_risk + period1 + period1*polity2i_risk  +  commst + abol*noslave , data = wi_df)
+
+tab_model(m01, m02, m11, m12, m21, m22, p.style = "stars", show.ci = F, rm.terms = c("(Intercept)","noslave"), dv.labels = c("First Law", "First Law", "First Full-Law", "First Full-Law", "Years Between", "Years Between"), file = "results/tab1.html")
+
+webshot("results/tab1.html", "results/tab1a.png", cliprect = "viewport")
+
+# , pred.labels = c("(intercept)","GDPpc","Years Ind.","DEM","<1889","DEM*<1889")
+# pred.labels = c("GDP", "startGDP", "DEM","<1923","DEM*<1923","COM","ABOL","NO"), 
+
+knitr::include_graphics("results/tab1.html")
+
+```
