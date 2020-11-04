@@ -871,8 +871,11 @@ wi_df_long <- wi_df_long %>%
          # year of abolition does not make sense for non-slave production countries
          # but take it as a counterfactual with mean replacement for NA
          abol = ifelse(is.na(abol), mean(abol, na.rm=T),abol),
-         # Taiwan missing
-         abol = ifelse(cow_code==713,1948,abol))
+         # Vietnam & Taiwan missing (Vietnam has history slave production)
+         abol = ifelse(cow_code==713,1948,abol),
+         abol = ifelse(cow_code==817,1956,abol),
+         noslave = ifelse(cow_code == 713, 1, noslave),
+         noslave = ifelse(cow_code == 817, 0, noslave))
 
 wi_df_long <- wi_df_long %>%
   group_by(cow_code) %>%
@@ -891,7 +894,8 @@ wi_df_long <- wi_df_long %>%
          f2flog = ifelse(!is.na(first2fullf), first2fullf+1, first2fullf), 
          f2flog = log(f2flog),
          first2full = ifelse(first2fullf>40,40,first2fullf),
-         scut = ifelse(scut == 0, NA, scut)) %>%
+         scut = ifelse(scut == 0, NA, scut),
+         first2full = ifelse(is.na(scut),NA, first2full)) %>%
   ungroup()
 
 
