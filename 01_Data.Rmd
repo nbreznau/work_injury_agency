@@ -1,8 +1,9 @@
 ---
-title: "Work-Injury Law Globally"
-author: "Nate Breznau"
-output: html_document
+title: "Technical Appendix 1: Data Setup"
+output: html_notebook
 ---
+
+Nate Breznau, breznau.nate@gmail.com
 
 Code for the chapter "The Introduction and Expansion of Work-Injury Law and National Risk Pooling: Testing the Global Role of Worker Agency"
 

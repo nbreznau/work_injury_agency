@@ -1,7 +1,14 @@
 ---
-title: "R Notebook"
+title: "Technical Appendix 2: Main Analyses"
 output: html_notebook
 ---
+
+*Nate Breznau*, breznau.nate@gmail.com
+
+This documents provides the code, main tables and figures, and additional tables and figures for the chapter, "The Introduction and Expansion of Work-Injury Law: Testing the Global Role of Worker Agency".
+
+"Technical Appendix 1: Data Setup" provides the sources and the code to generate the files for the following analysis. The file "wi_df_long.csv" contains the longitudinal data, not used here but hopefully useful for future analyses.
+
 
 
 ```{r setup, include=FALSE, message=F, warning=F}
@@ -91,12 +98,12 @@ m12 <- lm(scut ~ gdplog  + period1 + period1*polity2i_first + commst + abol*nosl
 
 m22 <- lm(first2full ~ gdplog  + period1 + period1*polity2i_first  +  commst + abol*noslave + noslave , data = wi_df)
 
-tab_model(m01, m02, m11, m12, m21, m22, p.style = "stars", show.ci = F, rm.terms = c("(Intercept)","noslave"), dv.labels = c("First Law", "First Law", "First Full-Law", "First Full-Law", "Years Between", "Years Between"), file = "results/tab1.html")
+tab_model(m01, m02, m11, m12, m21, m22, p.style = "stars", show.ci = F, rm.terms = c("(Intercept)","noslave"), dv.labels = c("First Law 1", "First Law 2", "First Full-Law 1", "First Full-Law 2", "Years Between 1", "Years Between 2"), pred.labels = c("GDP",  "pre-1923","Democracy","Democ.*pre-1923","Communist","Abolition","No Slave Production"), file = "results/tab1.html")
 
 webshot("results/tab1.html", "results/tab1.png", cliprect = "viewport")
 
 # , pred.labels = c("(intercept)","GDPpc","Years Ind.","DEM","<1889","DEM*<1889")
-# pred.labels = c("GDP", "startGDP", "DEM","<1923","DEM*<1923","COM","ABOL","NO"), 
+#  
 
 knitr::include_graphics("results/tab1.html")
 
@@ -179,7 +186,7 @@ p = ggplot(fmarg, aes(V5, V2)) + geom_col(color = "grey30") +
   scale_x_discrete(limits = c("Democracy", "GDP log", "Abolition", "Communist"),
                    labels = c("Democracy", "GDP log", "Abolition", "Communist")) +
   labs(x=c(""), y=c("Average Marginal Effect in Years Between"), color="black") +
-  geom_text(label = "(from \'first law\' to first blue-collar \'full-coverage\' law)",x = -1.1,y=1, size=3.4, color="grey40") +
+  geom_text(label = "(from \'first law\' to first blue-collar \'full-coverage\' law)",x = -0.4,y=-0.4, size=3.4, color="grey40") +
     geom_segment(y=0, yend=0,x=1,xend=4,  color="black", linetype=1) +
   scale_y_continuous(breaks = seq(-8, 8, by = 2)) +
   theme(plot.margin = unit(c(0.1,0.1,2,0.1), "cm"),
