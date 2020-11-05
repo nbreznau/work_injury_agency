@@ -203,5 +203,22 @@ ggsave("results/Fig3.png", plot=p, height=4, width=6, units="in", dpi=660)
 p
 ```
 
+```{r abol_scatter}
+
+# predict values
+wi_df2 <- subset(wi_df, noslave == 0)
+wi_df2$f2f_i <- predict.lm(m21, newdata = wi_df2)
+
+# remove missing on Years Between
+wi_df2$f2f_i <- ifelse(is.na(wi_df2$first2full), NA, wi_df2$f2f_i)
+
+# make residuals
+wi_df2$f2f_r <- wi_df2$first2full - wi_df2$f2f_i
+
+ggplot(data = wi_df2, aes(x = abol, y = f2f_r)) +
+  geom_point() +
+  geom_smooth(method=lm)
+
+```
 
 
