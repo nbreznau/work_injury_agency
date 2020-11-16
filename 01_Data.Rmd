@@ -19,6 +19,8 @@ Data sources:
 
 *data/fmrcmnst.csv* Former Communist/Socialist - author's own coding
 
+*PolityData.rds* ([Polity IV scores](http://www.systemicpeace.org/)) Saved as this file to preserve replicability (as Polity scores get updated regularly)
+
 ```{r setup, include=FALSE, message=F, warning=F}
 
 rm(list = ls(all = TRUE))
