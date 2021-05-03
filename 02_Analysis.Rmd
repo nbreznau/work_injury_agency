@@ -23,7 +23,9 @@ completeFun <- function(data, desiredCols) {
 }
 
 library(pacman)
-pacman::p_load("dplyr","tidyr","xlsx","ggplot2","survival","kableExtra","GLMMadaptive","jtools","sjPlot","sjmisc","sjlabelled","countrycode","margins","webshot")
+pacman::p_load("tidyverse","xlsx","ggplot2","survival","kableExtra","GLMMadaptive",
+               "jtools","sjPlot","sjmisc","sjlabelled","countrycode","margins","webshot","ragg",
+               'rnaturalearth','sf')
 
 # necessary if not installed
 # webshot::install_phantomjs() 
@@ -81,6 +83,85 @@ wi_df <- wi_df %>%
 
 ```
 
+### Maps
+
+
+
+```{r map_prep}
+
+
+wi_map <- ne_countries(returnclass = "sf") %>%
+  st_transform("+proj=eqearth") %>%
+  mutate(id = iso_a3) %>%
+  select(id, geometry)
+```
+
+
+
+
+```{r join}
+# need iso code for linking with map
+wi_df_m <- wi_df %>%
+  mutate(id = countrycode(country_name, "country.name", "iso3c")) %>%
+  select(id, labor_workinjury_firstlaw, labor_workinjury_firstlaw_bluecollar_fullcoverage)
+
+wi_map <- left_join(wi_map, wi_df_m, by = c("id"))
+```
+
+
+```{r map1}
+# source(here::here("utils/ggplot2_theme.R"), echo = FALSE)
+
+agg_png(filename = here::here("results","map1.png"), width = 1000, height = 800, res = 144)
+wi_map %>%
+  ggplot(aes(fill = labor_workinjury_firstlaw)) +
+  geom_sf(size = 0.15, colour = "black") +
+  scale_fill_continuous(limits = range(1870:2005),
+                        type = "viridis",
+                        guide = guide_colourbar(#label.position = "top",
+                                                #barwidth = 10, barheight = .5,
+                                                #ticks.linwidth = 1
+                          ),
+                        na.value = "white") +
+  lims(x = c(-10100000,14000000)) +
+  coord_sf(label_axes = "----") +
+  labs(fill = NULL,
+       title = "First National Work-Injury Law, Year of Adoption") +
+  theme_classic() +
+  theme(legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.key.width = unit(2, "line"))
+dev.off()
+
+knitr::include_graphics(here::here("results","map1.png"))
+```
+```{r map2}
+# source(here::here("utils/ggplot2_theme.R"), echo = FALSE)
+
+agg_png(filename = here::here("results","map2.png"), width = 1000, height = 800, res = 144)
+wi_map %>%
+  ggplot(aes(fill = labor_workinjury_firstlaw_bluecollar_fullcoverage)) +
+  geom_sf(size = 0.15, colour = "black") +
+  scale_fill_continuous(limits = range(1870:2005),
+                        type = "viridis",
+                        guide = guide_colourbar(#label.position = "top",
+                                                #barwidth = 10, barheight = .5,
+                                                #ticks.linwidth = 1
+                          ),
+                        na.value = "white") +
+  lims(x = c(-10100000,14000000)) +
+  coord_sf(label_axes = "----") +
+  labs(fill = NULL,
+       title = "First National Blue-Collar Full-Coverage Law, Year of Adoption",
+       caption = "Source: GWIP v1.0 (Breznau and Lanver 2020)") +
+  theme_classic() +
+  theme(legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.key.width = unit(2, "line"))
+dev.off()
+
+knitr::include_graphics(here::here("results","map2.png"))
+```
 ### Models 
 
 It is critical to treat the pre-1923 period differently as the early (western European) welfare states developed in a context that was mostly not democratic, among empires or fading empires, and under the first wave of industrialization. In fact, worker agency and socialism play key factors in this period, but for this analysis their impact is unmeasured. 
