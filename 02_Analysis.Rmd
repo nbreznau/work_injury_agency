@@ -103,11 +103,13 @@ wi_map <- ne_countries(returnclass = "sf") %>%
 # need iso code for linking with map
 wi_df_m <- wi_df %>%
   mutate(id = countrycode(country_name, "country.name", "iso3c")) %>%
-  select(id, labor_workinjury_firstlaw, labor_workinjury_firstlaw_bluecollar_fullcoverage)
+  select(id, labor_workinjury_firstlaw, labor_workinjury_firstlaw_bluecollar_fullcoverage, first2full, abol, commst, slavery)
 
-wi_map <- left_join(wi_map, wi_df_m, by = c("id"))
+wi_map <- left_join(wi_map, wi_df_m, by = c("id")) %>%
+  subset(id != "ATA")
 ```
 
+#### First Law
 
 ```{r map1}
 # source(here::here("utils/ggplot2_theme.R"), echo = FALSE)
@@ -135,6 +137,9 @@ dev.off()
 
 knitr::include_graphics(here::here("results","map1.png"))
 ```
+
+#### First Full Coverage Law
+
 ```{r map2}
 # source(here::here("utils/ggplot2_theme.R"), echo = FALSE)
 
@@ -162,6 +167,69 @@ dev.off()
 
 knitr::include_graphics(here::here("results","map2.png"))
 ```
+
+
+#### Years Between Laws
+
+```{r map3}
+# source(here::here("utils/ggplot2_theme.R"), echo = FALSE)
+
+agg_png(filename = here::here("results","map3.png"), width = 1000, height = 800, res = 144)
+wi_map %>%
+  ggplot(aes(fill = first2full)) +
+  geom_sf(size = 0.15, colour = "black") +
+  scale_fill_continuous(limits = range(wi_map$first2full),
+                        type = "viridis",
+                        guide = guide_colourbar(#label.position = "top",
+                                                #barwidth = 10, barheight = .5,
+                                                #ticks.linwidth = 1
+                          ),
+                        na.value = "white") +
+  lims(x = c(-10100000,14000000)) +
+  coord_sf(label_axes = "----") +
+  labs(fill = NULL,
+       title = "Years Between First Law and First Full Law",
+       caption = "Source: GWIP v1.0 (Breznau and Lanver 2020)") +
+  theme_classic() +
+  theme(legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.key.width = unit(2, "line"))
+dev.off()
+
+knitr::include_graphics(here::here("results","map3.png"))
+```
+#### Year of Abolition
+
+```{r map4}
+# source(here::here("utils/ggplot2_theme.R"), echo = FALSE)
+
+agg_png(filename = here::here("results","map4.png"), width = 1000, height = 800, res = 144)
+wi_map %>%
+  mutate(abol = ifelse(slavery == 0, NA, abol),
+         abol = ifelse(abol > 1975, 1975, abol),
+         abol = ifelse(abol < 1855, 1855, abol)) %>%
+  ggplot(aes(fill = abol)) +
+  geom_sf(size = 0.15, colour = "black") +
+  scale_fill_continuous(limits = range(wi_map$abol),
+                        breaks = c(1855,1885,1915,1945,1975),
+                        labels = c("1855-","1885","1915","1945","1975+"),
+                        type = "viridis",
+                        guide = guide_colourbar(),
+                        na.value = "white") +
+  lims(x = c(-10100000,14000000)) +
+  coord_sf(label_axes = "----") +
+  labs(fill = NULL,
+       title = "Year of Legal Abolition for Countries with Slave Trading and/or Production Systems",
+       caption = "Source: GWIP v1.0 (Breznau and Lanver 2020)") +
+  theme_classic() +
+  theme(legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.key.width = unit(2, "line"))
+dev.off()
+
+knitr::include_graphics(here::here("results","map4.png"))
+```
+
 ### Models 
 
 It is critical to treat the pre-1923 period differently as the early (western European) welfare states developed in a context that was mostly not democratic, among empires or fading empires, and under the first wave of industrialization. In fact, worker agency and socialism play key factors in this period, but for this analysis their impact is unmeasured. 
