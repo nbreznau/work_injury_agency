@@ -103,7 +103,7 @@ wi_map <- ne_countries(returnclass = "sf") %>%
 # need iso code for linking with map
 wi_df_m <- wi_df %>%
   mutate(id = countrycode(country_name, "country.name", "iso3c")) %>%
-  select(id, labor_workinjury_firstlaw, labor_workinjury_firstlaw_bluecollar_fullcoverage, first2full, abol, commst, slavery)
+  select(id, labor_workinjury_firstlaw, labor_workinjury_firstlaw_bluecollar_fullcoverage, first2full, abol, commst, noslave)
 
 wi_map <- left_join(wi_map, wi_df_m, by = c("id")) %>%
   subset(id != "ATA")
@@ -205,22 +205,22 @@ knitr::include_graphics(here::here("results","map3.png"))
 
 agg_png(filename = here::here("results","map4.png"), width = 1000, height = 800, res = 144)
 wi_map %>%
-  mutate(abol = ifelse(slavery == 0, NA, abol),
-         abol = ifelse(abol > 1975, 1975, abol),
-         abol = ifelse(abol < 1855, 1855, abol)) %>%
-  ggplot(aes(fill = abol)) +
-  geom_sf(size = 0.15, colour = "black") +
+  mutate(abol = ifelse(noslave == 1, NA, abol),
+         abol = ifelse(abol < 1879, 1879, abol)) %>%
+  ggplot() +
+  geom_sf(aes(fill = abol), size = 0.15, colour = "black") +
   scale_fill_continuous(limits = range(wi_map$abol),
-                        breaks = c(1855,1885,1915,1945,1975),
-                        labels = c("1855-","1885","1915","1945","1975+"),
+                        breaks = c(1880,1900,1920,1940,1960,1980),
+                        labels = c("1880-","1900","1920","1940","1960","1980+"),
                         type = "viridis",
+                        direction = -1,
                         guide = guide_colourbar(),
                         na.value = "white") +
   lims(x = c(-10100000,14000000)) +
   coord_sf(label_axes = "----") +
   labs(fill = NULL,
-       title = "Year of Legal Abolition for Countries with Slave Trading and/or Production Systems",
-       caption = "Source: GWIP v1.0 (Breznau and Lanver 2020)") +
+       title = "Abolition Year for Slave Trading/Production Countries",
+       caption = "Note: Year when slavery and forced production labor legally ended\nSource: GWIP v1.0 (Breznau and Lanver 2020); Legal Slavery v1 (Rosling 2018) adapted by Author") +
   theme_classic() +
   theme(legend.position = "bottom",
         legend.direction = "horizontal",
@@ -229,7 +229,30 @@ dev.off()
 
 knitr::include_graphics(here::here("results","map4.png"))
 ```
+#### Year of Abolition
 
+```{r map5}
+# source(here::here("utils/ggplot2_theme.R"), echo = FALSE)
+
+agg_png(filename = here::here("results","map5.png"), width = 1000, height = 800, res = 144)
+wi_map %>%
+  ggplot(aes(fill = factor(commst))) +
+  geom_sf(size = 0.15, colour = "black") +
+  scale_fill_manual(values = c("grey30", "grey90"),
+                    na.value = "grey30") +
+  lims(x = c(-10100000,14000000)) +
+  coord_sf(label_axes = "----") +
+  labs(fill = NULL,
+       title = "Countries with Communist/socialist Government",
+       caption = "Note: excludes temporary coups and dictatorships") +
+  theme_classic() +
+  theme(legend.position = "none",
+        legend.direction = "horizontal",
+        legend.key.width = unit(2, "line"))
+dev.off()
+
+knitr::include_graphics(here::here("results","map5.png"))
+```
 ### Models 
 
 It is critical to treat the pre-1923 period differently as the early (western European) welfare states developed in a context that was mostly not democratic, among empires or fading empires, and under the first wave of industrialization. In fact, worker agency and socialism play key factors in this period, but for this analysis their impact is unmeasured. 
@@ -254,7 +277,7 @@ webshot("results/tab1.html", "results/tab1.png", cliprect = "viewport")
 # , pred.labels = c("(intercept)","GDPpc","Years Ind.","DEM","<1889","DEM*<1889")
 #  
 
-knitr::include_graphics("results/tab1.html")
+knitr::include_graphics("results/tab1.png")
 
 ```
 
@@ -334,8 +357,8 @@ p = ggplot(fmarg, aes(V5, V2)) + geom_col(color = "grey30") +
   coord_flip(clip = "off") + 
   scale_x_discrete(limits = c("Democracy", "GDP log", "Abolition", "Communist"),
                    labels = c("Democracy", "GDP log", "Abolition", "Communist")) +
-  labs(x=c(""), y=c("Average Marginal Effect in Years Between"), color="black") +
-  geom_text(label = "(from \'first law\' to first blue-collar \'full-coverage\' law)",x = -0.4,y=-0.4, size=3.4, color="grey40") +
+  labs(x=c(""), y=c("Average Marginal Effect on Years Between"), color="black") +
+  geom_text(label = "(from \'First Law\' to first blue-collar \'Full-Coverage Law\')",x = -0.4,y=-0.4, size=3.4, color="grey40") +
     geom_segment(y=0, yend=0,x=1,xend=4,  color="black", linetype=1) +
   scale_y_continuous(breaks = seq(-8, 8, by = 2)) +
   theme(plot.margin = unit(c(0.1,0.1,2,0.1), "cm"),

@@ -13,7 +13,7 @@ Data sources:
 
 *mpd2018.csv* ([Maddison 2018](http://www.ggdc.net/maddison/maddison-project/home.htm), with author interpolations (see below))
 
-*data_legal_slavery_country.csv* (Rosling 2020)
+*data_legal_slavery_country.csv* (Rosling 2020) - adapted, see below
 
 *qog_bas_cs_jan20.csv* ([Dahlberg et al. 2020](http://www.qog.pol.gu.se doi:10.18157/qogbasjan20))
 
@@ -306,7 +306,7 @@ abol_long <- reshape(abolish_long, direction = "long", idvar = "cow_code", v.nam
 
 yes <- c(2,135,165,651,670,698,900)
 
-no <- c(20,155,344,349,352,366,367,368,371,372,373,600,616,620,630,640,645,652,660,663,645,679,690,692,694,696,703,760,771,775,780,811,812,817,820,830,835,840,850,920, 200, 205, 210, 211, 212, 220, 221, 223, 225, 230, 235, 255, 290, 305, 310, 316, 317, 325, 338, 339, 345, 350, 355, 359, 360, 365, 369, 370, 375, 380, 385, 390, 395, 651, 666, 698, 700, 702, 704, 705, 710, 712, 731, 732, 740, 750, 770, 800, 817, 940, 950, 983, 986, 987)
+no <- c(20,155,344,349,352,366,367,368,371,372,373,616,620,630,640,645,652,660,663,645,679,690,692,694,696,703,760,771,775,780,811,812,817,820,830,835,840,850,920, 200, 205, 210, 211, 212, 220, 221, 223, 225, 230, 235, 255, 290, 305, 310, 316, 317, 325, 338, 339, 345, 350, 355, 359, 360, 365, 369, 370, 375, 380, 385, 390, 395, 666, 698, 700, 702, 704, 705, 710, 712, 731, 732, 740, 750, 770, 800, 817, 940, 950, 983, 986, 987)
 
 wi_cnts <- abolish
 
@@ -716,6 +716,8 @@ Min center by colonial powerj when otherwise unknown, then add the year the colo
 
 2. Other adjustments
 
+600 Morocco 1961 Slavery 'abolished' in the constituion Goodman, R. David. 2012. “Demystifying ‘Islamic Slavery’: Using Legal Practices to Reconstruct the End of Slavery in Fes, Morocco.” History in Africa 39: 143–74.
+|-
 411 Eq Guinea, effective date 1945, prior to independence
 
 In 1 Dutch (1863)
@@ -760,6 +762,7 @@ wi_df_long <- wi_df_long %>%
            aboli = ifelse(ht_colonial==8 & aboli<1890,1890,aboli),
            aboli = ifelse(cow_code==52 | cow_code==53 | cow_code==55 | cow_code==60,1838,aboli),
            aboli = ifelse(cow_code==540 | cow_code==411,1945,aboli),
+           aboli = ifelse(cow_code==600, 1961, aboli),
            aboli = ifelse(abol<1906,abol,aboli),
            aboli = round(aboli))
 
@@ -769,6 +772,17 @@ wi_df_long_abol <- select(wi_df_long_abol, cow_code, abol)
 wi_df_long <- select(wi_df_long, -c(abol))
 
 wi_df_long <- left_join(wi_df_long, wi_df_long_abol)
+
+```
+
+Fix cross-sectional data
+
+```{r slavery_crosssec}
+wi_df <- wi_df %>%
+  mutate(abol = ifelse(cow_code==52 | cow_code==53 | cow_code==55 | cow_code==60,1838,abol),
+         abol = ifelse(cow_code==540 | cow_code==411,1945,abol),
+         abol = ifelse(cow_code==600, 1961, abol))
+
 
 ```
 
@@ -934,8 +948,8 @@ wi_df <- left_join(wi_df, wi_df_longa, by = 'cow_code')
 
 ```{r savepoint}
 # GDP for 
-write.csv(wi_df, file = "data/wi_df.csv")
-write.csv(wi_df_long, file = "data/wi_df_long.csv")
+write.csv(wi_df, file = "data/wi_df.csv", row.names = F)
+write.csv(wi_df_long, file = "data/wi_df_long.csv", row.names = F)
 ```
 
 
