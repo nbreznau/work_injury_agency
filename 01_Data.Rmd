@@ -263,7 +263,7 @@ https://www.gapminder.org/data/documentation/legal-slavery/
 file downloaded 24-04-2020
 Data countries by year sheet saved as a .csv file "data_legal_slavery_country.csv"
 
-```{r abolish}
+```{r abolish, warning = F, message = F}
 
 abolish <- read.csv("data/data_legal_slavery_country.csv", header=T, check.names=F, stringsAsFactors = F)
 
@@ -306,7 +306,7 @@ abol_long <- reshape(abolish_long, direction = "long", idvar = "cow_code", v.nam
 
 yes <- c(2,135,165,651,670,698,900)
 
-no <- c(20,155,344,349,352,366,367,368,371,372,373,616,620,630,640,645,652,660,663,645,679,690,692,694,696,703,760,771,775,780,811,812,817,820,830,835,840,850,920, 200, 205, 210, 211, 212, 220, 221, 223, 225, 230, 235, 255, 290, 305, 310, 316, 317, 325, 338, 339, 345, 350, 355, 359, 360, 365, 369, 370, 375, 380, 385, 390, 395, 666, 698, 700, 702, 704, 705, 710, 712, 731, 732, 740, 750, 770, 800, 817, 940, 950, 983, 986, 987)
+no <- c(20,155,344,349,352,366,367,368,371,372,373,616,620,630,640,645,652,660,663,645,679,690,692,694,696,703,760,771,775,780,811,812,817,820,830,835,840,850,920, 200, 205, 210, 211, 212, 220, 221, 223, 225, 230, 235, 255, 290, 305, 310, 316, 317, 325, 338, 339, 345, 350, 355, 359, 360, 365, 369, 370, 375, 380, 385, 390, 395, 666, 698, 700, 701, 702, 704, 705, 710, 712, 731, 732, 740, 750, 770, 800, 817, 940, 950, 983, 986, 987)
 
 wi_cnts <- abolish
 
@@ -884,7 +884,7 @@ wi_df_long <- wi_df_long %>%
          # indep should be truncated for this analysis
          independence = ifelse(independence<1850,1850,independence),
          # truncate at 1981
-         abol = ifelse(abol>1980,1981,abol),
+         abol = ifelse(abol>1982,1982,abol),
          # year of abolition does not make sense for non-slave production countries
          # but take it as a counterfactual with mean replacement for NA
          abol = ifelse(is.na(abol), mean(abol, na.rm=T),abol),
@@ -892,7 +892,7 @@ wi_df_long <- wi_df_long %>%
          abol = ifelse(cow_code==713,1948,abol),
          abol = ifelse(cow_code==817,1956,abol),
          noslave = ifelse(cow_code == 713, 1, noslave),
-         noslave = ifelse(cow_code == 817, 0, noslave))
+         noslave = ifelse(cow_code == 817, 1, noslave))
 
 wi_df_long <- wi_df_long %>%
   group_by(cow_code) %>%

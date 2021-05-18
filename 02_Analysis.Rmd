@@ -25,7 +25,7 @@ completeFun <- function(data, desiredCols) {
 library(pacman)
 pacman::p_load("tidyverse","xlsx","ggplot2","survival","kableExtra","GLMMadaptive",
                "jtools","sjPlot","sjmisc","sjlabelled","countrycode","margins","webshot","ragg",
-               'rnaturalearth','sf')
+               'rnaturalearth','sf', "ggmap")
 
 # necessary if not installed
 # webshot::install_phantomjs() 
@@ -124,7 +124,7 @@ wi_map %>%
                                                 #barwidth = 10, barheight = .5,
                                                 #ticks.linwidth = 1
                           ),
-                        na.value = "white") +
+                        na.value = "grey90") +
   lims(x = c(-10100000,14000000)) +
   coord_sf(label_axes = "----") +
   labs(fill = NULL,
@@ -203,56 +203,61 @@ knitr::include_graphics(here::here("results","map3.png"))
 ```{r map4}
 # source(here::here("utils/ggplot2_theme.R"), echo = FALSE)
 
+#make dataframe for plotting circles for countries that have a slavery past and are communist
+#note S and W are negative
+comm_dat <- data.frame(Country = c("Cuba", "Grenada", "Benin", "Congo", "Somalia", "Ethiopia", "Angola", "Mozambique"),
+                       long = c(23.1136, 12.8, 9.3077, -0.2280, 5.1521, 9.1450, -11.2027, -13.8),
+                       lat = c(-82.3666, -61.6790, 2.3158, 15.8277, 46.1996, 40.4897, 17.8739, 37.5))
+  
+comm_sf = st_as_sf(comm_dat, coords = c("lat", "long"), 
+                 crs = 4326, agr = "constant")
+
 agg_png(filename = here::here("results","map4.png"), width = 1000, height = 800, res = 144)
 wi_map %>%
-  mutate(abol = ifelse(noslave == 1, NA, abol),
-         abol = ifelse(abol < 1879, 1879, abol)) %>%
+  mutate(abol = ifelse(abol < 1866, 2, 
+                ifelse(abol > 1865 & abol < 1931, 3,
+                ifelse(abol > 1930 & abol < 1956, 4, 
+                ifelse(abol > 1955 & abol < 1961, 5,
+                ifelse(abol > 1960 & abol < 1971, 6,
+                ifelse(abol > 1970 & abol < 1982, 7, 8)))))),
+         abol = ifelse(noslave == 1, NA, abol),
+         abol = ifelse(commst == 1 & is.na(abol), 1, abol)
+         ) %>%
   ggplot() +
-  geom_sf(aes(fill = abol), size = 0.15, colour = "black") +
-  scale_fill_continuous(limits = range(wi_map$abol),
-                        breaks = c(1880,1900,1920,1940,1960,1980),
-                        labels = c("1880-","1900","1920","1940","1960","1980+"),
-                        type = "viridis",
-                        direction = -1,
-                        guide = guide_colourbar(),
-                        na.value = "white") +
+  geom_sf(aes(fill = factor(abol)), size = 0.15, colour = "black") +
+  scale_fill_manual(labels = c("Communist", 
+                                 "Abolition:\n< 1866", 
+                                 "1866-1930", 
+                                 "1931-1955",
+                                 "1956-1960",
+                                 "1961-1970",
+                                 "1971-1981",
+                                 "1982+"),
+                      values = c("#FDE725FF",
+                                 "#29AF7FFF",
+                                 "#1F968BFF",
+                                 "#287D8EFF",
+                                 "#33638DFF",
+                                 "#404788FF",
+                                 "#482677FF",
+                                 "#440154FF"),
+                        na.value = "grey90",
+                    na.translate = F) +
+  geom_sf(data = comm_sf, size = 2, colour = "#FDE725FF", show.legend = F, inherit.aes = F) +
   lims(x = c(-10100000,14000000)) +
   coord_sf(label_axes = "----") +
   labs(fill = NULL,
-       title = "Abolition Year for Slave Trading/Production Countries",
-       caption = "Note: Year when slavery and forced production labor legally ended\nSource: GWIP v1.0 (Breznau and Lanver 2020); Legal Slavery v1 (Rosling 2018) adapted by Author") +
+       title = "Communism and Abolition by Country",
+       caption = "Note: Abolition is when slavery and forced labor legally ended\nSource: GWIP v1.0 (Breznau and Lanver 2020); Legal Slavery v1 (Rosling 2018) adapted by Author") +
   theme_classic() +
-  theme(legend.position = "bottom",
-        legend.direction = "horizontal",
-        legend.key.width = unit(2, "line"))
+  theme(legend.position = "right",
+        legend.direction = "vertical",
+        legend.key.width = unit(1, "line"))
 dev.off()
 
 knitr::include_graphics(here::here("results","map4.png"))
 ```
-#### Year of Abolition
 
-```{r map5}
-# source(here::here("utils/ggplot2_theme.R"), echo = FALSE)
-
-agg_png(filename = here::here("results","map5.png"), width = 1000, height = 800, res = 144)
-wi_map %>%
-  ggplot(aes(fill = factor(commst))) +
-  geom_sf(size = 0.15, colour = "black") +
-  scale_fill_manual(values = c("grey30", "grey90"),
-                    na.value = "grey30") +
-  lims(x = c(-10100000,14000000)) +
-  coord_sf(label_axes = "----") +
-  labs(fill = NULL,
-       title = "Countries with Communist/socialist Government",
-       caption = "Note: excludes temporary coups and dictatorships") +
-  theme_classic() +
-  theme(legend.position = "none",
-        legend.direction = "horizontal",
-        legend.key.width = unit(2, "line"))
-dev.off()
-
-knitr::include_graphics(here::here("results","map5.png"))
-```
 ### Models 
 
 It is critical to treat the pre-1923 period differently as the early (western European) welfare states developed in a context that was mostly not democratic, among empires or fading empires, and under the first wave of industrialization. In fact, worker agency and socialism play key factors in this period, but for this analysis their impact is unmeasured. 
@@ -270,7 +275,9 @@ m12 <- lm(scut ~ gdplog  + period1 + period1*polity2i_first + commst + abol*nosl
 
 m22 <- lm(first2full ~ gdplog  + period1 + period1*polity2i_first  +  commst + abol*noslave + noslave , data = wi_df)
 
-tab_model(m01, m02, m11, m12, m21, m22, p.style = "stars", show.ci = F, rm.terms = c("(Intercept)","noslave"), dv.labels = c("First Law 1", "First Law 2", "First Full-Law 1", "First Full-Law 2", "Years Between 1", "Years Between 2"), pred.labels = c("GDP",  "pre-1923","Democracy","Democ.*pre-1923","Communist","Abolition","No Slave Production"), file = "results/tab1.html")
+tab_model(m01, m02, m11, m12, m21, m22, p.style = "stars", show.ci = F, 
+          rm.terms = c("(Intercept)","noslave"), 
+          dv.labels = c("First Law 1", "First Law 2", "First Full-Law 1", "First Full-Law 2", "Years Between 1", "Years Between 2"), pred.labels = c("GDP","pre-1923","Democracy, post-1923","Democracy, pre-1923","Communist","Abolition Year","No Slave Production"), file = here::here("results","tab1.html"))
 
 webshot("results/tab1.html", "results/tab1.png", cliprect = "viewport")
 
