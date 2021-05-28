@@ -852,7 +852,20 @@ dev.off()
 knitr::include_graphics("results/Fig2.png")
 ```
 #### Former Communist & Final Recodes
+The commmunist/socialist variable basically follows the list here:
+
+Iliev, Peter, and Louis Putterman. 2007. “Social Capability, History and the Economies of Communist and Postcommunist States.” Studies in Comparative International Development 42(1):36–66. doi: 10.1007/s12116-007-9002-8.
+
+But excludes Zimbabwe and Nicaragua.
+
+Zimbabwe not considered commuist/socialist because the government did not control the means of production and no socialist government was instilled in the 1980 revolution. 
+
+Makaye, Peter, and Constantine Munhande. 2013. “Zimbabwe’s Socialist Development Experiment 1980-1989.” Journal Of Humanities And Social Science 18:63–68. doi: 10.9790/0837-1826368.
+ 
+Nicaragua was never really socialist, or never fully run by a socialist government as sections of it were changing hands due to Cold War forces.
+
 ```{r finalrec, warning=F, message=F}
+
 # former/current communist list
 fmrc <- read.csv("data/fmrcmnst.csv", header = T)
 fmrc$cow_code <- countrycode(fmrc$country, "country.name","cown")
@@ -942,7 +955,50 @@ wi_df_longa <- select(wi_df_longa, cow_code, polity2i_first, polity2i_risk, nosl
 wi_df_longa <- completeFun(wi_df_longa, "polity2i_first")
 wi_df <- left_join(wi_df, wi_df_longa, by = 'cow_code')
 
+# make a variable to include countries that did not yet adopt a full-coverage blue-collar risk-pooling law as taking 65 years (25 years higher than the highest value) to adopt or adopted in 2016.
+
+wi_df <- wi_df %>%
+  mutate(first2full = ifelse(first2full == "NaN", NA, first2full),
+         scut = ifelse(scut == "NaN", NA, scut),
+         scut_na = ifelse(is.na(scut), 2016, scut),
+         first2full_na = ifelse(is.na(first2full), 65, first2full)
+  )
+
+# Fix period, pre-1923
+wi_df$period1 <- ifelse(wi_df$labor_workinjury_firstlaw < 1923, 1, 0)
+
+# for mathematical reasons it is fair to consider pre-1890 law introductions as outliers because democracy and nation state-hood was very rare, trim to 1890.
+wi_df$labor_workinjury_firstlaw_i <- ifelse(wi_df$labor_workinjury_firstlaw < 1891, 1890, wi_df$labor_workinjury_firstlaw)
+
+# Some correlations
+wi_df$independence <- as.numeric(wi_df$independence)
+
+# Make non-colonies, non-slavery-based labor forces, abol = NA
+wi_df$abol2 <- ifelse(wi_df$fcolony==1,wi_df$abol,NA)
+
+# years since indep
+wi_df$yrs_indep <- wi_df$labor_workinjury_firstlaw - wi_df$independence
+# make negative numbers equal to 0 (colonies)
+wi_df$yrs_indep <- ifelse(wi_df$yrs_indep < 0, 0, wi_df$yrs_indep)
+
 ```
+
+#### Communism and Slavery simultaneously
+
+For countries that have both communism and slavery we have to assume that communist movements came later, and that they cannot be effective until they began. Therefore we recode the first law year to be 2 years prior to the independence of the state in the 11 cases where communism and a slave production coexist in a country. 
+
+```{r recode}
+wi_df <- wi_df %>%
+  mutate(labor_workinjury_firstlaw2 = ifelse(commst == 1 & noslave == 0 & independence > labor_workinjury_firstlaw, independence - 2, labor_workinjury_firstlaw),
+         ffull = ifelse(!is.na(labor_workinjury_firstins) & !is.na(labor_workinjury_firstlaw_bluecollar_fullcoverage) & labor_workinjury_firstins >= labor_workinjury_firstlaw_bluecollar_fullcoverage, labor_workinjury_firstins, ifelse(!is.na(labor_workinjury_firstins) & !is.na(labor_workinjury_firstlaw_bluecollar_fullcoverage), labor_workinjury_firstlaw_bluecollar_fullcoverage, NA)),
+         ffull = ifelse(ffull < independence, independence, ffull),
+         first2full_2 = ffull - labor_workinjury_firstlaw2,
+         first2full_2 = ifelse(first2full_2 > 40, 40, first2full_2),
+         first2full_2 = ifelse(is.na(first2full), NA, first2full_2),
+         first2full_na_2 = ifelse(is.na(first2full_2), 65, first2full_2)
+  )
+```
+
 
 ### Save Data for Analysis
 

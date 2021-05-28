@@ -41,22 +41,7 @@ wi_df_long <- read.csv(file = "data/wi_df_long.csv",header=T)
 ### Correlations
 
 ```{r corrs}
-# Fix period, pre-1923
-wi_df$period1 <- ifelse(wi_df$labor_workinjury_firstlaw < 1923, 1, 0)
 
-# for mathematical reasons it is fair to consider pre-1890 law introductions as outliers because democracy and nation state-hood was very rare, trim to 1890.
-wi_df$labor_workinjury_firstlaw_i <- ifelse(wi_df$labor_workinjury_firstlaw < 1891, 1890, wi_df$labor_workinjury_firstlaw)
-
-# Some correlations
-wi_df$independence <- as.numeric(wi_df$independence)
-
-# Make non-colonies, non-slavery-based labor forces, abol = NA
-wi_df$abol2 <- ifelse(wi_df$fcolony==1,wi_df$abol,NA)
-
-# years since indep
-wi_df$yrs_indep <- wi_df$labor_workinjury_firstlaw - wi_df$independence
-# make negative numbers equal to 0 (colonies)
-wi_df$yrs_indep <- ifelse(wi_df$yrs_indep < 0, 0, wi_df$yrs_indep)
 
 # correlation frame
 cor1 <- select(wi_df, labor_workinjury_firstlaw, labor_workinjury_firstins, first2full, independence, polity2i_first, polity2i_risk, gdpi, gdp_7yr_rate, gdp_7yr_a, abol2, fcolony, yrs_indep)
@@ -205,9 +190,9 @@ knitr::include_graphics(here::here("results","map3.png"))
 
 #make dataframe for plotting circles for countries that have a slavery past and are communist
 #note S and W are negative
-comm_dat <- data.frame(Country = c("Cuba", "Grenada", "Benin", "Congo", "Somalia", "Ethiopia", "Angola", "Mozambique"),
-                       long = c(23.1136, 12.8, 9.3077, -0.2280, 5.1521, 9.1450, -11.2027, -13.8),
-                       lat = c(-82.3666, -61.6790, 2.3158, 15.8277, 46.1996, 40.4897, 17.8739, 37.5))
+comm_dat <- data.frame(Country = c("Cuba", "Grenada", "Benin", "Congo", "Somalia", "Ethiopia", "Angola", "Mozambique", "Madagascar", "Seychelles", "Sao Tome"),
+                       long = c(23.1136, 12.8, 9.3077, -0.2280, 5.1521, 9.1450, -11.2027, -13.8, -18.7669, -4.6796, 0.1864),
+                       lat = c(-82.3666, -61.6790, 2.3158, 15.8277, 46.1996, 40.4897, 17.8739, 37.5, 46.8691, 55.492, -6.6131))
   
 comm_sf = st_as_sf(comm_dat, coords = c("lat", "long"), 
                  crs = 4326, agr = "constant")
@@ -258,26 +243,41 @@ dev.off()
 knitr::include_graphics(here::here("results","map4.png"))
 ```
 
+
+
+
+
+
+
 ### Models 
+
+#### First Dropping Non Adopters
 
 It is critical to treat the pre-1923 period differently as the early (western European) welfare states developed in a context that was mostly not democratic, among empires or fading empires, and under the first wave of industrialization. In fact, worker agency and socialism play key factors in this period, but for this analysis their impact is unmeasured. 
 
 ```{r models}
-m01 <- lm(labor_workinjury_firstlaw ~ gdplog  + period1  +  period1*polity2i_first, data = wi_df)
+
+# drop non-adopters
+wi_df <- wi_df %>%
+  mutate(labor_workinjury_firstlaw_na = ifelse(is.na(scut), NA, labor_workinjury_firstlaw))
+
+m01 <- lm(labor_workinjury_firstlaw_na ~ gdplog  + period1  +  period1*polity2i_first, data = wi_df)
 
 m11 <- lm(scut ~ gdplog  + period1  + period1*polity2i_first, data = wi_df)
 
-m21 <- lm(first2full ~ gdplog  + period1  + period1*polity2i_first , data = wi_df)
+m21 <- lm(first2full_2 ~ gdplog  + period1  + period1*polity2i_first , data = wi_df)
 
-m02 <- lm(labor_workinjury_firstlaw ~ gdplog  + period1  + period1*polity2i_first + commst + abol*noslave + noslave, data = wi_df)
+m02 <- lm(labor_workinjury_firstlaw_na ~ gdplog  + period1  + period1*polity2i_first + commst + abol*noslave + noslave, data = wi_df)
 
 m12 <- lm(scut ~ gdplog  + period1 + period1*polity2i_first + commst + abol*noslave + noslave, data = wi_df)
 
-m22 <- lm(first2full ~ gdplog  + period1 + period1*polity2i_first  +  commst + abol*noslave + noslave , data = wi_df)
+m22 <- lm(first2full_2 ~ gdplog  + period1 + period1*polity2i_first  +  commst + abol*noslave + noslave , data = wi_df)
 
 tab_model(m01, m02, m11, m12, m21, m22, p.style = "stars", show.ci = F, 
           rm.terms = c("(Intercept)","noslave"), 
-          dv.labels = c("First Law 1", "First Law 2", "First Full-Law 1", "First Full-Law 2", "Years Between 1", "Years Between 2"), pred.labels = c("GDP","pre-1923","Democracy, post-1923","Democracy, pre-1923","Communist","Abolition Year","No Slave Production"), file = here::here("results","tab1.html"))
+          dv.labels = c("First Law 1", "First Law 2", "First Full-Law 1", "First Full-Law 2", "Years Between 1", "Years Between 2"), pred.labels = c("GDP","pre-1923","Democracy, post-1923","Democracy, pre-1923","Communist","Abolition Year","No Slave Production"), 
+          p.threshold = c(0.10,0.05,0.01),
+          file = here::here("results","tab1.html"))
 
 webshot("results/tab1.html", "results/tab1.png", cliprect = "viewport")
 
@@ -288,7 +288,37 @@ knitr::include_graphics("results/tab1.png")
 
 ```
 
+#### Second Including Them
 
+here i treat non-adopters as having a 65 year lag between laws (kind of assuming they will adopt someday)
+
+```{r models2}
+m04 <- lm(labor_workinjury_firstlaw ~ gdplog  + period1  +  period1*polity2i_first, data = wi_df)
+
+m14 <- lm(scut_na ~ gdplog  + period1  + period1*polity2i_first, data = wi_df)
+
+m24 <- lm(first2full_na_2 ~ gdplog  + period1  + period1*polity2i_first , data = wi_df)
+
+m05 <- lm(labor_workinjury_firstlaw ~ gdplog  + period1  + period1*polity2i_first + commst + abol*noslave + noslave, data = wi_df)
+
+m15 <- lm(scut_na ~ gdplog  + period1 + period1*polity2i_first + commst + abol*noslave + noslave, data = wi_df)
+
+m25 <- lm(first2full_na_2 ~ gdplog  + period1 + period1*polity2i_first  +  commst + abol*noslave + noslave , data = wi_df)
+
+tab_model(m04, m05, m14, m15, m24, m25, p.style = "stars", show.ci = F, 
+          rm.terms = c("(Intercept)","noslave"), 
+          dv.labels = c("First Law 1", "First Law 2", "First Full-Law 1", "First Full-Law 2", "Years Between 1", "Years Between 2"), pred.labels = c("GDP","pre-1923","Democracy, post-1923","Democracy, pre-1923","Communist","Abolition Year","No Slave Production"), 
+          p.threshold = c(0.10,0.05,0.01),
+          file = here::here("results","tab2.html"))
+
+webshot("results/tab2.html", "results/tab2.png", cliprect = "viewport")
+
+# , pred.labels = c("(intercept)","GDPpc","Years Ind.","DEM","<1889","DEM*<1889")
+#  
+
+knitr::include_graphics("results/tab2.png")
+
+```
 
 
 ```{r margins}
@@ -300,9 +330,15 @@ wi_abol1920 <- subset(wi_df, noslave==0)
 wi_abol1920$abol <- 1920
 
 wi_com0 <- wi_df
-wi_com0$commst <- 0
+wi_com0 <- wi_com0 %>%
+  mutate(
+    #noslave = ifelse(commst == 1 & noslave == 0, 1, noslave),
+         commst = 0)
 wi_com1 <- wi_df
-wi_com1$commst <- 1
+wi_com1 <- wi_com1 %>%
+  mutate(
+    #noslave = ifelse(commst == 1 & noslave == 0, 1, noslave),
+         commst = 1)
 
 wi_gdp2 <- wi_df
 wi_gdp2$gdplog <- 2
@@ -365,7 +401,7 @@ p = ggplot(fmarg, aes(V5, V2)) + geom_col(color = "grey30") +
   scale_x_discrete(limits = c("Democracy", "GDP log", "Abolition", "Communist"),
                    labels = c("Democracy", "GDP log", "Abolition", "Communist")) +
   labs(x=c(""), y=c("Average Marginal Effect on Years Between"), color="black") +
-  geom_text(label = "(from \'First Law\' to first blue-collar \'Full-Coverage Law\')",x = -0.4,y=-0.4, size=3.4, color="grey40") +
+  geom_text(label = "(from \'First Law\' to first blue-collar \'Full-Coverage Law\')",x = -0.4,y=-0.8, size=3.4, color="grey40") +
     geom_segment(y=0, yend=0,x=1,xend=4,  color="black", linetype=1) +
   scale_y_continuous(breaks = seq(-8, 8, by = 2)) +
   theme(plot.margin = unit(c(0.1,0.1,2,0.1), "cm"),
@@ -385,18 +421,24 @@ p
 ```{r abol_scatter}
 
 # predict values
-wi_df2 <- subset(wi_df, noslave == 0)
-wi_df2$f2f_i <- predict.lm(m21, newdata = wi_df2)
+wi_df2 <- wi_df
+wi_df2$f2f_i <- predict.lm(m24, newdata = wi_df2)
+wi_df2 <- subset(wi_df2, noslave == 0)
 
 # remove missing on Years Between
-wi_df2$f2f_i <- ifelse(is.na(wi_df2$first2full), NA, wi_df2$f2f_i)
+#wi_df2$f2f_i <- ifelse(is.na(wi_df2$first2full), NA, wi_df2$f2f_i)
 
 # make residuals
-wi_df2$f2f_r <- wi_df2$first2full - wi_df2$f2f_i
+wi_df2$f2f_r <- wi_df2$first2full_2 - wi_df2$f2f_i
 
-ggplot(data = wi_df2, aes(x = abol, y = f2f_r)) +
-  geom_point() +
-  geom_smooth(method=lm)
+wi_df2 %>%
+ggplot() +
+  geom_point(aes(x = abol, y = first2full_2)) +
+  geom_smooth(aes(x = abol, y = first2full_2), method=lm, color="black", level = 0.90) +
+  #geom_point(aes(x = abol, y = first2full)) +
+  #xlim(1950,2020) +
+  theme_classic()
+
 
 ```
 
