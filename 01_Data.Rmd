@@ -987,7 +987,31 @@ wi_df$yrs_indep <- ifelse(wi_df$yrs_indep < 0, 0, wi_df$yrs_indep)
 
 For countries that have both communism and slavery we have to assume that communist movements came later, and that they cannot be effective until they began. Therefore we recode the first law year to be 2 years prior to the independence of the state in the 11 cases where communism and a slave production coexist in a country. 
 
+To check this logic I also run a model with Communist and slave societies treated as independent entites where slavery societies are kept in the original coding format. 
+
 ```{r recode}
+
+wi_df2 <- wi_df %>%
+  mutate(commst = ifelse(commst == 1 & noslave == 0, 0, commst))
+
+wi_df3 <- wi_df %>%
+  subset(commst == 1 & noslave == 0) %>%
+  mutate(labor_workinjury_firstlaw2 = ifelse(independence > labor_workinjury_firstlaw, independence - 2, labor_workinjury_firstlaw),
+         ffull = ifelse(!is.na(labor_workinjury_firstins) & !is.na(labor_workinjury_firstlaw_bluecollar_fullcoverage) & labor_workinjury_firstins >= labor_workinjury_firstlaw_bluecollar_fullcoverage, labor_workinjury_firstins, ifelse(!is.na(labor_workinjury_firstins) & !is.na(labor_workinjury_firstlaw_bluecollar_fullcoverage), labor_workinjury_firstlaw_bluecollar_fullcoverage, NA)),
+         ffull = ifelse(ffull < independence, independence, ffull),
+         first2full_2 = ffull - labor_workinjury_firstlaw2,
+         first2full_2 = ifelse(first2full_2 > 40, 40, first2full_2),
+         first2full_2 = ifelse(is.na(first2full), NA, first2full_2),
+         first2full = first2full,
+         labor_workinjury_firstlaw = labor_workinjury_firstlaw,
+         noslave = 1,
+         cow_code = cow_code+1000) %>%
+  select(-c(labor_workinjury_firstlaw2, ffull, first2full_2))
+
+wi_df_comb <- rbind(wi_df2, wi_df3)
+
+rm(wi_df2, wi_df3)
+  
 wi_df <- wi_df %>%
   mutate(labor_workinjury_firstlaw2 = ifelse(commst == 1 & noslave == 0 & independence > labor_workinjury_firstlaw, independence - 2, labor_workinjury_firstlaw),
          ffull = ifelse(!is.na(labor_workinjury_firstins) & !is.na(labor_workinjury_firstlaw_bluecollar_fullcoverage) & labor_workinjury_firstins >= labor_workinjury_firstlaw_bluecollar_fullcoverage, labor_workinjury_firstins, ifelse(!is.na(labor_workinjury_firstins) & !is.na(labor_workinjury_firstlaw_bluecollar_fullcoverage), labor_workinjury_firstlaw_bluecollar_fullcoverage, NA)),
@@ -1005,6 +1029,7 @@ wi_df <- wi_df %>%
 ```{r savepoint}
 # GDP for 
 write.csv(wi_df, file = "data/wi_df.csv", row.names = F)
+write.csv(wi_df_comb, file = here::here("data","wi_df_comb.csv"), row.names = F)
 write.csv(wi_df_long, file = "data/wi_df_long.csv", row.names = F)
 ```
 
